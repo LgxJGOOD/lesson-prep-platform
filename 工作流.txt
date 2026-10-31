@@ -1,0 +1,38 @@
+#: 1
+  建议工作流名称: 教案生成
+  对应接口: POST /api/ai/lesson-plan
+  入参: topic、hours、audience、major、goals、template
+  出参（后端会直接返回给前端）: 完整 lessonPlan
+    对象：meta、objectives、keyPoints、difficulties、process、resources、homeworkSummary、interdisciplinary
+  ────────────────────────────────────────
+  #: 2
+  建议工作流名称: PPT 大纲与讲稿生成
+  对应接口: POST /api/ai/ppt
+  入参: 上面的 input + pageCount
+  出参（后端会直接返回给前端）: { pages: [{ id, title, type, tag, points, script }] }
+  ────────────────────────────────────────
+  #: 3
+  建议工作流名称: 课堂导入案例生成
+  对应接口: POST /api/ai/import-cases
+  入参: 上面的 input + batch
+  出参（后端会直接返回给前端）: 数组：[{ id, title, type, description, questions, related }]
+  ────────────────────────────────────────
+  #: 4
+  建议工作流名称: 作业与测验生成
+  对应接口: POST /api/ai/assignments
+  入参: 上面的 input + quizCount、difficulty
+  出参（后端会直接返回给前端）: { homework: [...], quiz: [...] }
+  ────────────────────────────────────────
+  #: 5
+  建议工作流名称: 教案教学过程重写
+  对应接口: POST /api/ai/rewrite-process
+  入参: input + lessonPlan
+  出参（后端会直接返回给前端）: process 数组（只有教学环节）
+  ────────────────────────────────────────
+  #: 6
+  建议工作流名称: 单页 PPT 讲稿重写
+  对应接口: POST /api/ai/regenerate-script
+  入参: input + page
+  出参（后端会直接返回给前端）: script 字符串
+  其中前 4 条是核心流程，必须做；后 2 条是「重写」按钮用的，如果暂时不做，界面上的重写功能可以先留空或继续用后
+   mock。

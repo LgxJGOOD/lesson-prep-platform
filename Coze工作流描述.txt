@@ -1,0 +1,233 @@
+﻿================================================================
+Coze 工作流描述
+================================================================
+共 7 个工作流，每个单独一节，直接粘到 Coze 的工作流生成框即可。
+每个工作流的结构都是：开始节点（收参数）→ 大模型节点（生成内容）→ 结束节点（输出 JSON）。
+
+
+================================================================
+WF0｜课程规划   course-plan
+================================================================
+
+【描述 —— 粘贴给 Coze 生成工作流】
+一个课程规划工作流。开始节点收 3 个必填参数（course_name、total_hours、audience）
+和 3 个选填参数（major、goals、template）。接一个大模型节点，要求模型把课程总课时
+拆成若干讲：每讲 2 课时，讲数等于总课时除以 2，最多 8 讲、最少 2 讲；各讲之间按
+「概念认知 → 原理理解 → 工具使用 → 场景应用 → 伦理反思」递进。每一讲都必须产出
+4 个字段：knowledgePoints（3-5 个知识点，具体到概念名/技术名）、objectives（3 条
+教学目标，用能解释/能区分/能设计/能评估这类可测量动词开头）、keyPoints（1-2 条教学
+重点）、difficulties（1-2 条教学难点）。有专业背景时，知识点与目标必须结合该专业。
+结束节点只输出一个 String 字段，内容是严格 JSON。
+
+【输入】
+course_name   文本   必填   课程名称
+total_hours   数字   必填   课程总课时
+audience      文本   必填   授课对象，如「大一 计算机专业」
+major         文本   必填   专业背景
+goals         文本   选填   课程总体目标
+template      文本   选填   教案模板
+
+【输出】结束节点 → 一个 String 字段
+{"lessons":[{"title":"","hours":2,"knowledgePoints":[],"objectives":[],"keyPoints":[],"difficulties":[]}]}
+
+
+================================================================
+WF1｜课堂导入案例   import-cases
+================================================================
+
+【描述 —— 粘贴给 Coze 生成工作流】
+一个课堂导入案例生成工作流。开始节点收下面的参数，其中 knowledge_points、
+objectives、key_points、difficulties 都是 JSON 数组字符串（如 ["概念A","概念B"]），
+大模型节点自行解析。要求模型生成 3 个课堂开场导入案例，类型各不相同，分别为
+「新闻事件」「趣味演示」「争议话题」各一个；每个案例包含 title、type、description
+（2-3 句，交代背景并点出与本讲的关联）、questions（2 个开放性问题）、related（写明
+关联的是本讲哪个知识点）。案例必须紧扣本讲知识点；有专业背景时至少 1 个案例与该
+专业相关；batch 是批次号，越大越要避开用滥的例子（如 AlphaGo、ChatGPT 尽量不用）。
+结束节点只输出一个 String 字段，内容是严格 JSON。
+
+【输入】
+topic             文本            必填   本讲标题
+hours             数字            必填   本讲课时数
+audience          文本            必填   授课对象
+major             文本            选填   专业背景
+goals             文本            选填   课程总体目标
+template          文本            选填   教案模板
+knowledge_points  文本（JSON 数组） 必填   本讲知识点
+objectives        文本（JSON 数组） 必填   本讲教学目标
+key_points        文本（JSON 数组） 必填   教学重点
+difficulties      文本（JSON 数组） 必填   教学难点
+batch             数字            必填   批次号，用于换一批
+
+【输出】结束节点 → 一个 String 字段
+{"cases":[{"id":1,"title":"","type":"新闻事件","description":"","questions":["",""],"related":""}]}
+
+
+================================================================
+WF2｜教案生成   lesson-plan
+================================================================
+
+【描述 —— 粘贴给 Coze 生成工作流】
+一个教案生成工作流。开始节点收下面的参数，其中 knowledge_points、objectives、
+key_points、difficulties 是 JSON 数组字符串，import_cases 是 WF1 的完整输出
+（{"cases":[...]} 的 JSON 字符串），大模型节点自行解析。要求模型写一份完整教案，
+并且必须消费 import_cases：教学过程的「导入」环节要从传入的案例里选一个开场，在
+内容里写明所用案例的标题并写出提问话术。教案产出结构：meta（topic、hours、
+audience、major、template、createdAt 留空）、objectives、keyPoints、difficulties
+（与课程规划一致，可细化但不改方向）、process（4 个环节：导入/讲解/互动/总结，
+minutes 之和等于 hours × 45，一课时按 45 分钟）、resources（本讲实际用到的资源）、
+homeworkSummary（一句话概括课后作业）、interdisciplinary（本讲与专业背景的结合点，
+有专业背景时必须具体）。结束节点只输出一个 String 字段，内容是严格 JSON。
+
+【输入】
+topic             文本            必填   本讲标题
+hours             数字            必填   本讲课时数
+audience          文本            必填   授课对象
+major             文本            选填   专业背景
+goals             文本            选填   课程总体目标
+template          文本            选填   教案模板
+knowledge_points  文本（JSON 数组） 必填   本讲知识点
+objectives        文本（JSON 数组） 必填   本讲教学目标
+key_points        文本（JSON 数组） 必填   教学重点
+difficulties      文本（JSON 数组） 必填   教学难点
+import_cases      文本（JSON 对象） 必填   WF1 的完整输出 {"cases":[...]}
+
+【输出】结束节点 → 一个 String 字段
+{"meta":{"topic":"","hours":2,"audience":"","major":"","template":"","createdAt":""},
+ "objectives":[],"keyPoints":[],"difficulties":[],
+ "process":[{"stage":"导入","minutes":8,"content":""}],
+ "resources":[],"homeworkSummary":"","interdisciplinary":""}
+
+
+================================================================
+WF3｜PPT 大纲与讲稿   ppt
+================================================================
+
+【描述 —— 粘贴给 Coze 生成工作流】
+一个教学 PPT 生成工作流。开始节点收下面的参数，其中 knowledge_points、objectives、
+key_points、difficulties 是 JSON 数组字符串，import_cases 是 WF1 的完整输出，
+lesson_plan 是 WF2 的完整输出，大模型节点自行解析。要求模型严格根据教案来生成 PPT
+逐页大纲与讲师讲稿，页数等于 page_count，页序固定为：封面 → 学习目标 → 导入案例 →
+知识点若干页 → 案例分析 → 课堂互动 → 小结 → 课后作业 → 结束页。每一页包含：
+id（从 1 连续编号）、title、type（只能取 cover / objectives / import / knowledge /
+case / interaction / summary / homework / thanks）、tag（页面小标签，可为空字符串）、
+points（数组，必须是教案内容的提炼：学习目标页来自教案 objectives，知识点页每页承载
+1 个知识点、每条不超过 30 字，案例分析页用案例的 questions，课堂互动页来自教案
+process 的互动环节，小结页来自教案 keyPoints，课后作业页来自教案 homeworkSummary）、
+script（讲师讲稿，80-150 字，口语化能直接照读，必须提到具体知识点）。结束节点只输出
+一个 String 字段，内容是严格 JSON。
+
+【输入】
+topic             文本            必填   本讲标题
+hours             数字            必填   本讲课时数
+audience          文本            必填   授课对象
+major             文本            选填   专业背景
+goals             文本            选填   课程总体目标
+template          文本            选填   教案模板
+knowledge_points  文本（JSON 数组） 必填   本讲知识点
+objectives        文本（JSON 数组） 必填   本讲教学目标
+key_points        文本（JSON 数组） 必填   教学重点
+difficulties      文本（JSON 数组） 必填   教学难点
+import_cases      文本（JSON 对象） 必填   WF1 的完整输出
+lesson_plan       文本（JSON 对象） 必填   WF2 的完整输出
+page_count        数字            必填   PPT 页数，8-12
+
+【输出】结束节点 → 一个 String 字段
+{"pages":[{"id":1,"title":"","type":"cover","tag":"","points":[""],"script":""}]}
+
+
+================================================================
+WF4｜作业与测验   assignments
+================================================================
+
+【描述 —— 粘贴给 Coze 生成工作流】
+一个作业与测验出题工作流。开始节点收下面的参数，其中 knowledge_points、objectives、
+key_points、difficulties 是 JSON 数组字符串，import_cases 是 WF1 的完整输出，
+lesson_plan 是 WF2 的完整输出，大模型节点自行解析。要求模型严格根据教案出题：
+homework 出 2-3 条，每条含 title（具体可执行的作业任务）、mode（个人/小组）、
+duration（预计用时）、criteria（评分要点，分号分隔），其中至少 1 条要结合专业背景、
+是应用型任务；quiz 出恰好 quiz_count 题，题型从 单选/多选/判断/简答 中搭配，单选和
+多选必须给 4 个 options（格式 "A. 选项内容"），判断题 options 传空数组、answer 写
+"正确"或"错误"，简答题 options 传空数组，每题都必须有 answer 和 analysis。题目必须
+覆盖本讲知识点与重点，难度遵循 difficulty 参数；有专业背景时至少 1 题用该专业场景
+命题。结束节点只输出一个 String 字段，内容是严格 JSON。
+
+【输入】
+topic             文本            必填   本讲标题
+hours             数字            必填   本讲课时数
+audience          文本            必填   授课对象
+major             文本            选填   专业背景
+goals             文本            选填   课程总体目标
+template          文本            选填   教案模板
+knowledge_points  文本（JSON 数组） 必填   本讲知识点
+objectives        文本（JSON 数组） 必填   本讲教学目标
+key_points        文本（JSON 数组） 必填   教学重点
+difficulties      文本（JSON 数组） 必填   教学难点
+import_cases      文本（JSON 对象） 必填   WF1 的完整输出
+lesson_plan       文本（JSON 对象） 必填   WF2 的完整输出
+quiz_count        数字            必填   题目数量，2-8
+difficulty        文本            必填   简单 / 中等 / 较难
+
+【输出】结束节点 → 一个 String 字段
+{"homework":[{"id":1,"title":"","mode":"个人","duration":"30 分钟","criteria":""}],
+ "quiz":[{"id":1,"type":"单选","question":"","options":["A. ..."],"answer":"","analysis":""}]}
+
+
+================================================================
+WF5｜重写教学过程   rewrite-process
+================================================================
+
+【描述 —— 粘贴给 Coze 生成工作流】
+一个重写教学过程的工作流，用于老师对教案里的「教学过程」不满意时换一版教法。
+开始节点收下面的参数，其中 knowledge_points、objectives、key_points、difficulties
+是 JSON 数组字符串，lesson_plan 是现有教案的完整输出，大模型节点自行解析。要求模型
+只重写教案的 process 部分：保持 4 个环节（导入/讲解/互动/总结），minutes 之和等于
+hours × 45；与原设计相比要明显更具体 —— 导入要有提问话术、讲解要有例子与板书要点、
+互动要有分组方式与任务单、总结要给出知识框架；不得改变本讲的知识点与教学目标，
+只是换一种更可操作的教法。结束节点只输出一个 String 字段，内容是严格 JSON。
+
+【输入】
+topic             文本            必填   本讲标题
+hours             数字            必填   本讲课时数
+audience          文本            必填   授课对象
+major             文本            选填   专业背景
+goals             文本            选填   课程总体目标
+template          文本            选填   教案模板
+knowledge_points  文本（JSON 数组） 必填   本讲知识点
+objectives        文本（JSON 数组） 必填   本讲教学目标
+key_points        文本（JSON 数组） 必填   教学重点
+difficulties      文本（JSON 数组） 必填   教学难点
+lesson_plan       文本（JSON 对象） 必填   现有教案的完整输出
+
+【输出】结束节点 → 一个 String 字段
+{"process":[{"stage":"导入","minutes":8,"content":""}]}
+
+
+================================================================
+WF6｜重写单页讲稿   regenerate-script
+================================================================
+
+【描述 —— 粘贴给 Coze 生成工作流】
+一个重写 PPT 单页讲稿的工作流，用于老师对某一页的讲稿不满意时单独重写。开始节点收
+下面的参数，其中 knowledge_points、objectives、key_points、difficulties 是 JSON
+数组字符串，lesson_plan 是教案的完整输出，page 是目标页的 JSON 对象
+（{"id","title","type","tag","points","script"}），大模型节点自行解析。要求模型
+重写这一页的讲师讲稿：口语化能直接照读，80-150 字；必须覆盖该页 points 里的全部
+要点，并结合教案中的知识点展开；要换一个切入角度或换一个例子，不要只是同义改写。
+结束节点只输出一个 String 字段，内容是严格 JSON。
+
+【输入】
+topic             文本            必填   本讲标题
+hours             数字            必填   本讲课时数
+audience          文本            必填   授课对象
+major             文本            选填   专业背景
+goals             文本            选填   课程总体目标
+template          文本            选填   教案模板
+knowledge_points  文本（JSON 数组） 必填   本讲知识点
+objectives        文本（JSON 数组） 必填   本讲教学目标
+key_points        文本（JSON 数组） 必填   教学重点
+difficulties      文本（JSON 数组） 必填   教学难点
+lesson_plan       文本（JSON 对象） 必填   教案的完整输出
+page              文本（JSON 对象） 必填   目标页 {"id","title","type","tag","points","script"}
+
+【输出】结束节点 → 一个 String 字段
+{"script":""}

@@ -1,0 +1,260 @@
+AI 通识课备课助手 · Coze 工作流清单
+========================================
+结束节点：把大模型输出节点接到结束节点时，结束节点类型改成 Array / Object，或者中间加一个「代码节点」把字符串 JSON.parse
+  后再输出
+说明：
+1. 「状态」为「已接入」表示后端已配置并调用真实 Coze 工作流。
+2. 「状态」为「待新建」表示后端当前使用 mock 数据兜底，需要在 Coze 创建后填入对应环境变量。
+3. 字段名必须与后端请求参数保持一致，否则调用会缺参或解析失败。
+
+
+一、课程拆课工作流
+----------------------------------------
+名称：course_planner
+功能描述：
+  输入课程基础信息与总课时，由大模型自动把课程拆分为多节课，输出每节课的
+  教学大纲（标题、课时数、知识点、教学目标、教学重点、教学难点）。
+
+输入：
+  courseName   String   必填   课程名称，例如：人工智能通识
+  totalHours   Integer  必填   课程总课时，例如：32
+  audience     String   可选   授课对象，例如：大一 全校各专业
+  major        String   可选   授课专业背景，例如：医学、金融
+  goals        String   可选   课程总体目标，例如：侧重概念理解与跨学科案例
+  template     String   可选   教案模板名称，例如：通用教案模板
+
+输出：
+  lessons  Array  课时大纲数组，每个元素结构如下：
+    title            String  课时标题，例如：第1讲 人工智能导论
+    hours            Integer 本讲课课时数，默认 2
+    knowledgePoints  Array   知识点列表
+    objectives       Array   教学目标列表
+    keyPoints        Array   教学重点列表
+    difficulties     Array   教学难点列表
+
+状态：已接入
+后端环境变量：
+  COZE_COURSE_PLAN_ENDPOINT（优先）
+  COZE_COURSE_PLAN_WORKFLOW_ID（备选）
+已配置 endpoint：https://63c8h377jt.coze.site/run
+接入说明：
+  优先调用已发布工作流的 /run 地址；若未配置 endpoint，但配置了 workflow_id，
+  则走 /v1/workflow/run；两者都未配置时使用 build_course_plan 生成 mock 拆课结果。
+
+
+二、教案生成工作流
+----------------------------------------
+名称：lesson_plan
+功能描述：
+  根据单节课的主题、课时、授课对象、专业背景等信息，生成完整教案，包括
+  教学目标、教学重难点、教学过程、教学资源、课后作业、跨学科案例融合。
+
+输入：
+  topic     String  必填   本讲主题，例如：第1讲 人工智能导论
+  hours     Integer 必填   本讲课时数，默认 2
+  audience  String  可选   授课对象
+  major     String  可选   授课专业背景
+  goals     String  可选   课程总体目标
+  template  String  可选   教案模板名称
+
+输出：
+  meta            Object  教案元信息，包括 topic/hours/audience/major/template
+  objectives      Array   教学目标列表
+  keyPoints       Array   教学重点列表
+  difficulties    Array   教学难点列表
+  process         Array   教学过程列表，每项包含 stage/minutes/content
+  resources       Array   教学资源列表
+  homeworkSummary String  课后作业简要说明
+  interdisciplinary String 跨学科案例融合说明
+
+状态：已接入
+后端环境变量：
+  COZE_LESSON_PLAN_ENDPOINT（优先）
+  COZE_LESSON_PLAN_WORKFLOW_ID（备选）
+已配置 endpoint：https://kjmqw2pnxc.coze.site/run
+已配置 workflow_id：7674130391289511971
+接入说明：
+  优先调用已发布工作流的 /run 地址；若未配置 endpoint，但配置了 workflow_id，
+  则走 /v1/workflow/run；两者都未配置时使用 build_lesson_plan 返回 mock 教案。
+
+
+三、PPT 大纲与讲稿生成工作流
+----------------------------------------
+名称：ppt_generator
+功能描述：
+  根据单节课信息生成 PPT 大纲与对应讲师讲稿，每页包含核心要点、讲稿内容，
+  并为后续动画视频生成预留 animationPrompt 动画提示。
+
+输入：
+  topic     String  必填   本讲主题
+  hours     Integer 必填   本讲课时数
+  audience  String  可选   授课对象
+  major     String  可选   授课专业背景
+  goals     String  可选   课程总体目标
+  template  String  可选   教案模板名称
+  pageCount Integer 必填   PPT 总页数，范围 8-12，默认 10
+
+输出：
+  pages  Array  PPT 页面数组，每个元素结构如下：
+    id              Integer 页码
+    title           String  页面标题
+    type            String  页面类型，默认 knowledge
+    tag             String  可选标签，例如：导入/概念/案例/总结
+    points          Array   本页核心要点列表
+    script          String  讲师讲稿
+    animationPrompt String  可选，动画视频生成提示词
+
+状态：已接入
+后端环境变量：
+  COZE_PPT_ENDPOINT（优先）
+  COZE_PPT_WORKFLOW_ID（备选）
+已配置 endpoint：https://yydbq7ryng.coze.site/run
+接入说明：
+  优先调用已发布工作流的 /run 地址；若未配置 endpoint，但配置了 workflow_id，
+  则走 /v1/workflow/run；两者都未配置时使用 build_ppt 返回 mock 大纲。
+
+
+四、课堂导入案例生成工作流
+----------------------------------------
+名称：import_cases
+功能描述：
+  根据单节课信息生成课堂导入案例，用真实、有趣的开场案例吸引学生注意力，
+  并提供讨论问题和关联知识点。
+
+输入：
+  topic     String  必填   本讲主题
+  hours     Integer 必填   本讲课时数
+  audience  String  可选   授课对象
+  major     String  可选   授课专业背景
+  goals     String  可选   课程总体目标
+  template  String  可选   教案模板名称
+  batch     Integer 可选   换一批的批次号，默认 0
+
+输出：
+  Array  案例数组，每个元素结构如下：
+    title       String  案例标题
+    type        String  案例类型：新闻事件 / 争议话题 / 趣味演示
+    description String  案例描述
+    questions   Array   讨论问题列表
+    related     String  关联知识点
+
+状态：已接入
+后端环境变量：COZE_IMPORT_CASES_ENDPOINT（优先）
+已配置 endpoint：https://wdx68zy8hy.coze.site/run
+接入说明：
+  优先调用已发布工作流的 /run 地址；未配置时后端使用 build_import_cases 返回 mock 案例。
+
+
+五、作业与测验生成工作流
+----------------------------------------
+名称：assignments
+功能描述：
+  根据单节课信息生成课后作业与课堂测验题，内容结合专业背景进行差异化生成。
+
+输入：
+  topic      String  必填   本讲主题
+  hours      Integer 必填   本讲课时数
+  audience   String  可选   授课对象
+  major      String  可选   授课专业背景
+  goals      String  可选   课程总体目标
+  template   String  可选   教案模板名称
+  quiz_count Integer 可选   测验题数量，默认 5
+  difficulty String  可选   难度：简单 / 中等 / 较难，默认 中等
+
+输出（Coze 原始返回字段）：
+  assignments    Array  课后作业数组，每个元素结构如下：
+    title         String  作业题目
+    description   String  作业描述
+    type          String  完成形式：调研报告 / 论述题 / 小组讨论 / 实践操作 等
+    estimated_time String 预计用时
+    requirements  Array   作业要求 / 评分要点
+  quiz_questions Array  测验题数组，每个元素结构如下：
+    type        String  题型：单选题 / 多选题 / 判断题 / 填空题 / 简答题
+    question    String  题目
+    options     Array   选项列表，简答/填空可为空
+    answer      String  参考答案
+    explanation String  解析
+
+状态：已接入
+后端环境变量：COZE_ASSIGNMENTS_ENDPOINT（优先）
+已配置 endpoint：https://5mk5t2vr9q.coze.site/run
+接入说明：
+  优先调用已发布工作流的 /run 地址；未配置时后端使用 build_assignments 返回 mock 作业与测验。
+  后端会把 assignments/quiz_questions 归一化为前端所需的 homework/quiz 结构。
+
+
+六、教学过程重写工作流
+----------------------------------------
+名称：rewrite_process
+功能描述：
+  在已有教案基础上，重新生成或改写教学过程部分，用于教师对某个环节不满意时
+  单独刷新教学过程。
+
+输入：
+  topic       String  必填   本讲主题
+  hours       Integer 必填   本讲课时数
+  audience    String  可选   授课对象
+  major       String  可选   授课专业背景
+  goals       String  可选   课程总体目标
+  template    String  可选   教案模板名称
+  lesson_plan Object  必填   当前完整教案对象
+
+输出：
+  process  Array  新的教学过程数组，每项包含 stage/minutes/content
+
+状态：已接入
+后端环境变量：COZE_REWRITE_PROCESS_ENDPOINT（优先）
+已配置 endpoint：https://r5ypg7xyrk.coze.site/run
+接入说明：
+  优先调用已发布工作流的 /run 地址；未配置时后端使用 rewrite_lesson_process 返回 mock 重写结果。
+
+
+七、单页讲稿重写工作流
+----------------------------------------
+名称：regenerate_script
+功能描述：
+  针对 PPT 中的某一页，单独重新生成该页的讲师讲稿，用于局部优化。
+
+输入：
+  topic     String  必填   本讲主题
+  hours     Integer 必填   本讲课时数
+  audience  String  可选   授课对象
+  major     String  可选   授课专业背景
+  goals     String  可选   课程总体目标
+  template  String  可选   教案模板名称
+  page      Object  必填   需要重写讲稿的单页对象
+
+输出：
+  script  String  新的讲师讲稿
+
+状态：已接入
+后端环境变量：COZE_REGENERATE_SCRIPT_ENDPOINT（优先）
+已配置 endpoint：https://xpphgrfqt5.coze.site/run
+接入说明：
+  优先调用已发布工作流的 /run 地址；未配置时后端使用 regenerate_slide_script 返回 mock 讲稿。
+
+
+八、动画视频生成工作流（后续阶段）
+----------------------------------------
+名称：animation_video_generator
+功能描述：
+  根据 PPT 单页标题、内容要点和动画提示词，生成对应的动画教学视频。
+  该功能暂不接入本次「课程拆课 → 逐课生成教案/PPT/案例/作业」主流程。
+
+输入：
+  topic           String  必填   本讲主题
+  title           String  必填   当前页标题
+  animationPrompt String  必填   动画视频提示词
+  duration        String  可选   视频时长
+  aspectRatio     String  可选   画面比例
+
+输出：
+  videoUrl  String  视频地址
+  coverUrl  String  封面图地址
+  status    String  生成状态
+  duration  String  视频时长
+
+状态：待新建
+后端环境变量：COZE_ANIMATION_VIDEO_WORKFLOW_ID
+接入说明：
+  留待后续动画视频阶段接入，当前后端不调用该工作流。
